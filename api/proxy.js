@@ -1,7 +1,8 @@
 const axios = require('axios');
+const https = require('https');
 
 module.exports = async (req, res) => {
-  // ターゲットURLを取得（クエリまたはパスから）
+  // ターゲットURLを取得
   let targetUrl = req.query.url || req.url.slice(1);
 
   if (!targetUrl) {
@@ -11,19 +12,17 @@ module.exports = async (req, res) => {
   // プロトコルが省略されている場合、https:// をデフォルトで付与
   try {
     if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-      targetUrl = `https://${targetUrl}`; // デフォルトで https を試す
+      targetUrl = `https://${targetUrl}`;
     }
-
-    // URL のフォーマットを検証
     const parsedUrl = new URL(decodeURIComponent(targetUrl));
-    targetUrl = parsedUrl.toString(); // 正規化された URL を使用
+    targetUrl = parsedUrl.toString();
   } catch (error) {
     console.error('Invalid URL format:', targetUrl, error.message);
     return res.status(400).json({ error: 'Invalid URL format', details: error.message });
   }
 
   try {
-    // ターゲットURLにリクエスト
+    // axios でリクエスト（SSL 検証を無効化）
     const response = await axios({
       method: req.method,
       url: targetUrl,
@@ -34,6 +33,10 @@ module.exports = async (req, res) => {
       },
       data: req.body,
       timeout: 10000,
+      // SSL 証明書検証を無効化（個人利用向け）
+      httpsAgent: new https.Agent({
+        rejectUnauthorized: false,
+      }),
     });
 
     // CORS ヘッダー設定
